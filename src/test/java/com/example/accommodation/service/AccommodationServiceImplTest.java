@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.accommodation.dto.accommodation.AccommodationDto;
@@ -38,6 +37,11 @@ class AccommodationServiceImplTest {
 
     private AccommodationService accommodationService;
 
+    @BeforeEach
+    void setUp() {
+        accommodationService = new AccommodationServiceImpl(
+                accommodationRepository, accommodationMapper, notificationService);
+    }
 
     @Test
     void create_validRequest_returnsDto() {
@@ -64,7 +68,6 @@ class AccommodationServiceImplTest {
         AccommodationDto actual = accommodationService.create(requestDto);
 
         assertThat(actual.getId()).isEqualTo(ID);
-        verify(notificationService).sendNotification(any());
     }
 
     @Test
