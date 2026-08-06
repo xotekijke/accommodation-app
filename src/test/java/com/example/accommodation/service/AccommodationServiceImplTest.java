@@ -15,6 +15,7 @@ import com.example.accommodation.model.enums.AccommodationType;
 import com.example.accommodation.repository.AccommodationRepository;
 import com.example.accommodation.service.impl.AccommodationServiceImpl;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,20 +46,18 @@ class AccommodationServiceImplTest {
 
     @Test
     void create_validRequest_returnsDto() {
-        AccommodationRequestDto requestDto = new AccommodationRequestDto();
-        requestDto.setType(AccommodationType.APARTMENT);
-        requestDto.setLocation("Kyiv");
-        requestDto.setSize("1 Bedroom");
-        requestDto.setDailyRate(BigDecimal.valueOf(50));
-        requestDto.setAvailability(3);
+        AccommodationRequestDto requestDto = new AccommodationRequestDto(
+                AccommodationType.APARTMENT, "Kyiv", "1 Bedroom",
+                List.of(), BigDecimal.valueOf(50), 3);
 
         Accommodation model = new Accommodation();
         model.setId(ID);
         model.setType(AccommodationType.APARTMENT);
         model.setLocation("Kyiv");
 
-        AccommodationDto expectedDto = new AccommodationDto();
-        expectedDto.setId(ID);
+        AccommodationDto expectedDto = new AccommodationDto(
+                ID, AccommodationType.APARTMENT, "Kyiv", "1 Bedroom",
+                List.of(), BigDecimal.valueOf(50), 3);
 
         when(accommodationMapper.toModel(requestDto)).thenReturn(model);
         when(accommodationRepository.save(model)).thenReturn(model);
@@ -67,7 +66,7 @@ class AccommodationServiceImplTest {
 
         AccommodationDto actual = accommodationService.create(requestDto);
 
-        assertThat(actual.getId()).isEqualTo(ID);
+        assertThat(actual.id()).isEqualTo(ID);
     }
 
     @Test

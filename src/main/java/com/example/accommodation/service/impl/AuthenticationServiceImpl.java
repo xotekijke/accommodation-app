@@ -11,12 +11,14 @@ import com.example.accommodation.model.enums.Role;
 import com.example.accommodation.repository.UserRepository;
 import com.example.accommodation.security.JwtUtil;
 import com.example.accommodation.service.AuthenticationService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
@@ -24,29 +26,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
 
-    public AuthenticationServiceImpl(UserRepository userRepository,
-            UserMapper userMapper,
-            PasswordEncoder passwordEncoder,
-            AuthenticationManager authenticationManager,
-            JwtUtil jwtUtil) {
-        this.userRepository = userRepository;
-        this.userMapper = userMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.authenticationManager = authenticationManager;
-        this.jwtUtil = jwtUtil;
-    }
-
     @Override
     public UserResponseDto register(UserRegistrationRequestDto requestDto) {
-        if (userRepository.existsByEmail(requestDto.getEmail())) {
+        if (userRepository.existsByEmail(requestDto.email())) {
             throw new RegistrationException(
-                    "User with email " + requestDto.getEmail() + " already exists");
+                    "User with email " + requestDto.email() + " already exists");
         }
-        User user = new User();
-        user.setEmail(requestDto.getEmail());
-        user.setPassword(passwordEncoder.encode(requestDto.getPassword()));
-        user.setFirstName(requestDto.getFirstName());
-        user.setLastName(requestDto.getLastName());
+        User user = userMapper.toModel(requestDto);
+        user.setPassword(passwordEncoder.encode(requestDto.password()));
         user.setRole(Role.CUSTOMER);
         return userMapper.toDto(userRepository.save(user));
     }
@@ -55,8 +42,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public UserLoginResponseDto login(UserLoginRequestDto requestDto) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        requestDto.getEmail(), requestDto.getPassword()));
-        String token = jwtUtil.generateToken(requestDto.getEmail());
+                        requestDto.email(), requestDto.password()));
+        String token = jwtUtil.generateToken(requestDto.email());
         return new UserLoginResponseDto(token);
     }
 }

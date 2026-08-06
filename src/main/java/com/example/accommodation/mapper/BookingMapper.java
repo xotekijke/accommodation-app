@@ -1,37 +1,19 @@
 package com.example.accommodation.mapper;
 
+import com.example.accommodation.config.MapperConfig;
 import com.example.accommodation.dto.booking.BookingDetailedDto;
 import com.example.accommodation.dto.booking.BookingDto;
 import com.example.accommodation.model.Booking;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class BookingMapper {
-    private final AccommodationMapper accommodationMapper;
+@Mapper(config = MapperConfig.class, uses = AccommodationMapper.class)
+public interface BookingMapper {
 
-    public BookingMapper(AccommodationMapper accommodationMapper) {
-        this.accommodationMapper = accommodationMapper;
-    }
+    @Mapping(target = "accommodationId", source = "accommodation.id")
+    @Mapping(target = "userId", source = "user.id")
+    BookingDto toDto(Booking booking);
 
-    public BookingDto toDto(Booking booking) {
-        BookingDto dto = new BookingDto();
-        dto.setId(booking.getId());
-        dto.setCheckInDate(booking.getCheckInDate());
-        dto.setCheckOutDate(booking.getCheckOutDate());
-        dto.setAccommodationId(booking.getAccommodation().getId());
-        dto.setUserId(booking.getUser().getId());
-        dto.setStatus(booking.getStatus());
-        return dto;
-    }
-
-    public BookingDetailedDto toDetailedDto(Booking booking) {
-        BookingDetailedDto dto = new BookingDetailedDto();
-        dto.setId(booking.getId());
-        dto.setCheckInDate(booking.getCheckInDate());
-        dto.setCheckOutDate(booking.getCheckOutDate());
-        dto.setAccommodation(accommodationMapper.toDto(booking.getAccommodation()));
-        dto.setUserId(booking.getUser().getId());
-        dto.setStatus(booking.getStatus());
-        return dto;
-    }
+    @Mapping(target = "userId", source = "user.id")
+    BookingDetailedDto toDetailedDto(Booking booking);
 }

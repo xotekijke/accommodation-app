@@ -14,8 +14,12 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.net.URL;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
+@Getter
+@Setter
 @Table(name = "payments")
 public class Payment {
     @Id
@@ -30,60 +34,11 @@ public class Payment {
     @JoinColumn(name = "booking_id", nullable = false, unique = true)
     private Booking booking;
 
-    @Column(name = "session_url", length = 1024)
+    @Column(length = 1024)
     private URL sessionUrl;
 
-    @Column(name = "session_id")
     private String sessionId;
 
-    @Column(name = "amount_to_pay", nullable = false)
+    @Column(nullable = false)
     private BigDecimal amountToPay;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public PaymentStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(PaymentStatus status) {
-        this.status = status;
-    }
-
-    public Booking getBooking() {
-        return booking;
-    }
-
-    public void setBooking(Booking booking) {
-        this.booking = booking;
-    }
-
-    public URL getSessionUrl() {
-        return sessionUrl;
-    }
-
-    public void setSessionUrl(URL sessionUrl) {
-        this.sessionUrl = sessionUrl;
-    }
-
-    public String getSessionId() {
-        return sessionId;
-    }
-
-    public void setSessionId(String sessionId) {
-        this.sessionId = sessionId;
-    }
-
-    public BigDecimal getAmountToPay() {
-        return amountToPay;
-    }
-
-    public void setAmountToPay(BigDecimal amountToPay) {
-        this.amountToPay = amountToPay;
-    }
 }

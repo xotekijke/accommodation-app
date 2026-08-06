@@ -18,51 +18,43 @@ import com.example.accommodation.service.BookingService;
 import com.example.accommodation.service.NotificationService;
 import java.time.LocalDate;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final AccommodationRepository accommodationRepository;
     private final BookingMapper bookingMapper;
     private final NotificationService notificationService;
 
-    public BookingServiceImpl(BookingRepository bookingRepository,
-            AccommodationRepository accommodationRepository,
-            BookingMapper bookingMapper,
-            NotificationService notificationService) {
-        this.bookingRepository = bookingRepository;
-        this.accommodationRepository = accommodationRepository;
-        this.bookingMapper = bookingMapper;
-        this.notificationService = notificationService;
-    }
-
     @Override
     @Transactional
     public BookingDto create(User user, BookingRequestDto requestDto) {
         Accommodation accommodation = accommodationRepository
-                .findWithLockById(requestDto.getAccommodationId());
+                .findWithLockById(requestDto.accommodationId());
         if (accommodation == null) {
             throw new EntityNotFoundException(
-                    "Can't find accommodation by id " + requestDto.getAccommodationId());
+                    "Can't find accommodation by id " + requestDto.accommodationId());
         }
         if (accommodation.getAvailability() <= 0) {
             throw new BookingConflictException(
                     "Accommodation " + accommodation.getId() + " has no available units");
         }
         boolean overlaps = bookingRepository.existsOverlappingBooking(
-                accommodation.getId(), requestDto.getCheckInDate(), requestDto.getCheckOutDate());
+                accommodation.getId(), requestDto.checkInDate(), requestDto.checkOutDate());
         if (overlaps) {
             throw new BookingConflictException(
                     "Accommodation " + accommodation.getId()
                             + " is already booked for the requested dates");
         }
         Booking booking = new Booking();
-        booking.setCheckInDate(requestDto.getCheckInDate());
-        booking.setCheckOutDate(requestDto.getCheckOutDate());
+        booking.setCheckInDate(requestDto.checkInDate());
+        booking.setCheckOutDate(requestDto.checkOutDate());
         booking.setAccommodation(accommodation);
         booking.setUser(user);
         booking.setStatus(BookingStatus.PENDING);
@@ -109,15 +101,15 @@ public class BookingServiceImpl implements BookingService {
         checkOwnership(user, booking);
         boolean overlaps = bookingRepository.existsOverlappingBooking(
                 booking.getAccommodation().getId(),
-                requestDto.getCheckInDate(), requestDto.getCheckOutDate());
-        if (overlaps && (!requestDto.getCheckInDate().equals(booking.getCheckInDate())
-                || !requestDto.getCheckOutDate().equals(booking.getCheckOutDate()))) {
+                requestDto.checkInDate(), requestDto.checkOutDate());
+        if (overlaps && (!requestDto.checkInDate().equals(booking.getCheckInDate())
+                || !requestDto.checkOutDate().equals(booking.getCheckOutDate()))) {
             throw new BookingConflictException(
                     "Accommodation " + booking.getAccommodation().getId()
                             + " is already booked for the requested dates");
         }
-        booking.setCheckInDate(requestDto.getCheckInDate());
-        booking.setCheckOutDate(requestDto.getCheckOutDate());
+        booking.setCheckInDate(requestDto.checkInDate());
+        booking.setCheckOutDate(requestDto.checkOutDate());
         return bookingMapper.toDto(bookingRepository.save(booking));
     }
 
