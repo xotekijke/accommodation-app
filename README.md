@@ -15,15 +15,22 @@ payments, with Telegram notifications and JWT-based authentication.
 - Docker / docker-compose
 - JUnit 5, Mockito, AssertJ
 
+## Clone the project
+
+```bash
+git clone https://github.com/<your-username>/accommodation.git
+cd accommodation
+```
+
 ## Getting started
 
 1. Copy `.env.sample` to `.env` and fill in real values (DB credentials, a random
    `JWT_SECRET`, a Stripe **test-mode** secret key, and your Telegram bot token/chat id).
 2. Run the app:
 
-   ```bash
+```bash
    docker-compose up --build
-   ```
+```
 
 3. The API is available at `http://localhost:${SPRING_LOCAL_PORT}`.
 4. Swagger UI: `http://localhost:${SPRING_LOCAL_PORT}/swagger-ui.html`
@@ -37,6 +44,9 @@ payments, with Telegram notifications and JWT-based authentication.
 
 Tests run against an in-memory H2 database via the `test` Spring profile
 (`application-test.properties`), so no Docker/Postgres is required to run them.
+This includes controller-level integration tests under
+`src/test/java/com/example/accommodation/controller/`, which exercise the full
+Spring context, security filter chain, and JWT auth end-to-end via `MockMvc`.
 
 ## Roles
 
@@ -61,3 +71,48 @@ Tests run against an in-memory H2 database via the `test` Spring profile
 | GET | `/bookings?userId=&status=` | Filtered booking search (manager only) |
 | POST | `/payments` | Create a Stripe checkout session for a booking |
 | GET | `/payments/success` / `/payments/cancel` | Stripe redirect handlers |
+
+## Data model
+
+```mermaid
+erDiagram
+    USER ||--o{ BOOKING : makes
+    ACCOMMODATION ||--o{ BOOKING : "is booked in"
+    BOOKING ||--|| PAYMENT : has
+
+    USER {
+        Long id PK
+        string email
+        string firstName
+        string lastName
+        string password
+        Role role
+        boolean isDeleted
+    }
+    ACCOMMODATION {
+        Long id PK
+        AccommodationType type
+        string location
+        string size
+        BigDecimal dailyRate
+        Integer availability
+        boolean isDeleted
+    }
+    BOOKING {
+        Long id PK
+        LocalDate checkInDate
+        LocalDate checkOutDate
+        Long accommodation_id FK
+        Long user_id FK
+        BookingStatus status
+        boolean isDeleted
+    }
+    PAYMENT {
+        Long id PK
+        PaymentStatus status
+        Long booking_id FK
+        URL sessionUrl
+        string sessionId
+        BigDecimal amountToPay
+    }
+```
