@@ -4,11 +4,13 @@ import com.example.accommodation.dto.payment.PaymentDto;
 import com.example.accommodation.dto.payment.PaymentRequestDto;
 import com.example.accommodation.model.User;
 import com.example.accommodation.service.PaymentService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,15 +24,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 @RequestMapping("/payments")
+@RequiredArgsConstructor
 @Tag(name = "Payments", description = "Endpoints for handling Stripe payments")
 public class PaymentController {
     private final PaymentService paymentService;
 
-    public PaymentController(PaymentService paymentService) {
-        this.paymentService = paymentService;
-    }
-
     @GetMapping
+    @Operation(summary = "List payments")
     public List<PaymentDto> findByUser(@AuthenticationPrincipal User user,
                                        @RequestParam(required = false) Long userId) {
         return paymentService.findByUser(user, userId);
@@ -38,6 +38,7 @@ public class PaymentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create Stripe payment session")
     public PaymentDto createSession(@AuthenticationPrincipal User user,
                                     @RequestBody @Valid PaymentRequestDto requestDto,
                                     HttpServletRequest request) {
@@ -52,12 +53,14 @@ public class PaymentController {
     }
 
     @GetMapping("/success")
+    @Operation(summary = "Stripe success redirect")
     public Map<String, String> success(@RequestParam("session_id") String sessionId) {
         paymentService.handleSuccess(sessionId);
         return Map.of("message", "Payment was successful");
     }
 
     @GetMapping("/cancel")
+    @Operation(summary = "Stripe cancel redirect")
     public Map<String, String> cancel(@RequestParam("session_id") String sessionId) {
         paymentService.handleCancel(sessionId);
         return Map.of("message",

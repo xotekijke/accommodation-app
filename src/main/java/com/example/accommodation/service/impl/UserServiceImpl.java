@@ -8,17 +8,14 @@ import com.example.accommodation.mapper.UserMapper;
 import com.example.accommodation.model.User;
 import com.example.accommodation.repository.UserRepository;
 import com.example.accommodation.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-
-    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper) {
-        this.userRepository = userRepository;
-        this.userMapper = userMapper;
-    }
 
     @Override
     public UserResponseDto getProfile(User user) {
@@ -27,8 +24,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponseDto updateProfile(User user, UserUpdateRequestDto requestDto) {
-        user.setFirstName(requestDto.getFirstName());
-        user.setLastName(requestDto.getLastName());
+        userMapper.updateModel(requestDto, user);
         return userMapper.toDto(userRepository.save(user));
     }
 
@@ -37,7 +33,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Can't find user by id " + userId));
-        user.setRole(requestDto.getRole());
+        user.setRole(requestDto.role());
         return userMapper.toDto(userRepository.save(user));
     }
 }

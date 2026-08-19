@@ -1,45 +1,19 @@
 package com.example.accommodation.mapper;
 
+import com.example.accommodation.config.MapperConfig;
 import com.example.accommodation.dto.accommodation.AccommodationDto;
 import com.example.accommodation.dto.accommodation.AccommodationRequestDto;
 import com.example.accommodation.model.Accommodation;
-import java.util.ArrayList;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 
-@Component
-public class AccommodationMapper {
+@Mapper(config = MapperConfig.class)
+public interface AccommodationMapper {
 
-    public Accommodation toModel(AccommodationRequestDto requestDto) {
-        Accommodation accommodation = new Accommodation();
-        accommodation.setType(requestDto.getType());
-        accommodation.setLocation(requestDto.getLocation());
-        accommodation.setSize(requestDto.getSize());
-        accommodation.setAmenities(requestDto.getAmenities() == null
-                ? new ArrayList<>() : requestDto.getAmenities());
-        accommodation.setDailyRate(requestDto.getDailyRate());
-        accommodation.setAvailability(requestDto.getAvailability());
-        return accommodation;
-    }
+    AccommodationDto toDto(Accommodation accommodation);
 
-    public void updateModel(Accommodation accommodation, AccommodationRequestDto requestDto) {
-        accommodation.setType(requestDto.getType());
-        accommodation.setLocation(requestDto.getLocation());
-        accommodation.setSize(requestDto.getSize());
-        accommodation.setAmenities(requestDto.getAmenities() == null
-                ? new ArrayList<>() : requestDto.getAmenities());
-        accommodation.setDailyRate(requestDto.getDailyRate());
-        accommodation.setAvailability(requestDto.getAvailability());
-    }
+    Accommodation toModel(AccommodationRequestDto requestDto);
 
-    public AccommodationDto toDto(Accommodation accommodation) {
-        AccommodationDto dto = new AccommodationDto();
-        dto.setId(accommodation.getId());
-        dto.setType(accommodation.getType());
-        dto.setLocation(accommodation.getLocation());
-        dto.setSize(accommodation.getSize());
-        dto.setAmenities(accommodation.getAmenities());
-        dto.setDailyRate(accommodation.getDailyRate());
-        dto.setAvailability(accommodation.getAvailability());
-        return dto;
-    }
+    void updateModel(AccommodationRequestDto requestDto,
+                     @MappingTarget Accommodation accommodation);
 }

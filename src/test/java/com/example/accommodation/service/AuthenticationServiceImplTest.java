@@ -10,6 +10,7 @@ import com.example.accommodation.dto.user.UserResponseDto;
 import com.example.accommodation.exception.RegistrationException;
 import com.example.accommodation.mapper.UserMapper;
 import com.example.accommodation.model.User;
+import com.example.accommodation.model.enums.Role;
 import com.example.accommodation.repository.UserRepository;
 import com.example.accommodation.security.JwtUtil;
 import com.example.accommodation.service.impl.AuthenticationServiceImpl;
@@ -49,11 +50,8 @@ class AuthenticationServiceImplTest {
 
     @Test
     void register_emailAlreadyExists_throwsException() {
-        UserRegistrationRequestDto requestDto = new UserRegistrationRequestDto();
-        requestDto.setEmail("taken@example.com");
-        requestDto.setPassword("password123");
-        requestDto.setFirstName("Jane");
-        requestDto.setLastName("Doe");
+        UserRegistrationRequestDto requestDto = new UserRegistrationRequestDto(
+                "taken@example.com", "password123", "Jane", "Doe");
 
         when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
 
@@ -63,26 +61,29 @@ class AuthenticationServiceImplTest {
 
     @Test
     void register_newEmail_savesUser() {
-        UserRegistrationRequestDto requestDto = new UserRegistrationRequestDto();
-        requestDto.setEmail("new@example.com");
-        requestDto.setPassword("password123");
-        requestDto.setFirstName("Jane");
-        requestDto.setLastName("Doe");
+        UserRegistrationRequestDto requestDto = new UserRegistrationRequestDto(
+                "new@example.com", "password123", "Jane", "Doe");
+
+        User mappedUser = new User();
+        mappedUser.setEmail("new@example.com");
+        mappedUser.setFirstName("Jane");
+        mappedUser.setLastName("Doe");
 
         User savedUser = new User();
         savedUser.setId(1L);
         savedUser.setEmail("new@example.com");
 
-        UserResponseDto expectedDto = new UserResponseDto();
-        expectedDto.setId(1L);
+        UserResponseDto expectedDto = new UserResponseDto(
+                1L, "new@example.com", "Jane", "Doe", Role.CUSTOMER);
 
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+        when(userMapper.toModel(requestDto)).thenReturn(mappedUser);
         when(passwordEncoder.encode("password123")).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
         when(userMapper.toDto(savedUser)).thenReturn(expectedDto);
 
         UserResponseDto actual = authenticationService.register(requestDto);
 
-        assertThat(actual.getId()).isEqualTo(1L);
+        assertThat(actual.id()).isEqualTo(1L);
     }
 }

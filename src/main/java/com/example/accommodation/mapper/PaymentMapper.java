@@ -1,21 +1,22 @@
 package com.example.accommodation.mapper;
 
+import com.example.accommodation.config.MapperConfig;
 import com.example.accommodation.dto.payment.PaymentDto;
 import com.example.accommodation.model.Payment;
-import org.springframework.stereotype.Component;
+import java.net.URL;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
-@Component
-public class PaymentMapper {
+@Mapper(config = MapperConfig.class)
+public interface PaymentMapper {
 
-    public PaymentDto toDto(Payment payment) {
-        PaymentDto dto = new PaymentDto();
-        dto.setId(payment.getId());
-        dto.setStatus(payment.getStatus());
-        dto.setBookingId(payment.getBooking().getId());
-        dto.setSessionUrl(payment.getSessionUrl() == null
-                ? null : payment.getSessionUrl().toString());
-        dto.setSessionId(payment.getSessionId());
-        dto.setAmountToPay(payment.getAmountToPay());
-        return dto;
+    @Mapping(target = "bookingId", source = "booking.id")
+    @Mapping(target = "sessionUrl", source = "sessionUrl", qualifiedByName = "urlToString")
+    PaymentDto toDto(Payment payment);
+
+    @Named("urlToString")
+    default String urlToString(URL url) {
+        return url == null ? null : url.toString();
     }
 }

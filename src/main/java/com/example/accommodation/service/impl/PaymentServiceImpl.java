@@ -34,6 +34,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class PaymentServiceImpl implements PaymentService {
     private static final long CENTS_PER_UNIT = 100L;
+    private static final String CURRENCY = "usd";
+    private static final String SESSION_ID_PARAM = "session_id";
+    private static final String SESSION_ID_PLACEHOLDER = "{CHECKOUT_SESSION_ID}";
 
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
@@ -42,10 +45,10 @@ public class PaymentServiceImpl implements PaymentService {
     private final String stripeApiKey;
 
     public PaymentServiceImpl(PaymentRepository paymentRepository,
-            BookingRepository bookingRepository,
-            PaymentMapper paymentMapper,
-            NotificationService notificationService,
-            @Value("${stripe.secret.key}") String stripeApiKey) {
+                              BookingRepository bookingRepository,
+                              PaymentMapper paymentMapper,
+                              NotificationService notificationService,
+                              @Value("${stripe.secret.key}") String stripeApiKey) {
         this.paymentRepository = paymentRepository;
         this.bookingRepository = bookingRepository;
         this.paymentMapper = paymentMapper;
@@ -60,11 +63,11 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public List<PaymentDto> findByUser(User user, Long userId) {
-        Long targetId = user.getRole() == Role.MANAGER ? userId : user.getId();
         if (user.getRole() != Role.MANAGER && userId != null
                 && !userId.equals(user.getId())) {
             throw new AccessDeniedException("You can only view your own payments");
         }
+        Long targetId = user.getRole() == Role.MANAGER ? userId : user.getId();
         List<Payment> payments = targetId == null
                 ? paymentRepository.findAll()
                 : paymentRepository.findAllByBookingUserId(targetId);
@@ -74,59 +77,15 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentDto createPaymentSession(User user, PaymentRequestDto requestDto,
-            String successBaseUrl, String cancelBaseUrl) {
-        Booking booking = bookingRepository.findById(requestDto.getBookingId())
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Can't find booking by id " + requestDto.getBookingId()));
-        if (user.getRole() != Role.MANAGER && !booking.getUser().getId().equals(user.getId())) {
-            throw new AccessDeniedException("You can only pay for your own bookings");
-        }
+                                           String successBaseUrl, String cancelBaseUrl) {
+        Booking booking = getBookingOrThrow(requestDto.bookingId());
+        checkPaymentAccess(user, booking);
 
-        long days = ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate());
-        BigDecimal totalAmount = booking.getAccommodation().getDailyRate()
-                .multiply(BigDecimal.valueOf(days));
-        long unitAmountCents = totalAmount.multiply(BigDecimal.valueOf(CENTS_PER_UNIT))
-                .longValueExact();
+        BigDecimal totalAmount = calculateTotalAmount(booking);
+        Session session = createStripeSession(booking, totalAmount, successBaseUrl, cancelBaseUrl);
+        Payment payment = buildPayment(booking, session, totalAmount);
 
-        String successUrl = UriComponentsBuilder.fromUriString(successBaseUrl)
-                .queryParam("session_id", "{CHECKOUT_SESSION_ID}")
-                .build(false)
-                .toUriString();
-        String cancelUrl = UriComponentsBuilder.fromUriString(cancelBaseUrl)
-                .queryParam("session_id", "{CHECKOUT_SESSION_ID}")
-                .build(false)
-                .toUriString();
-
-        try {
-            SessionCreateParams params = SessionCreateParams.builder()
-                    .setMode(SessionCreateParams.Mode.PAYMENT)
-                    .setSuccessUrl(successUrl)
-                    .setCancelUrl(cancelUrl)
-                    .addLineItem(SessionCreateParams.LineItem.builder()
-                            .setQuantity(1L)
-                            .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
-                                    .setCurrency("usd")
-                                    .setUnitAmount(unitAmountCents)
-                                    .setProductData(SessionCreateParams.LineItem.PriceData
-                                            .ProductData.builder()
-                                            .setName("Booking #" + booking.getId())
-                                            .build())
-                                    .build())
-                            .build())
-                    .build();
-            Session session = Session.create(params);
-
-            Payment payment = new Payment();
-            payment.setBooking(booking);
-            payment.setStatus(PaymentStatus.PENDING);
-            payment.setSessionId(session.getId());
-            payment.setSessionUrl(toUrl(session.getUrl()));
-            payment.setAmountToPay(totalAmount);
-            return paymentMapper.toDto(paymentRepository.save(payment));
-        } catch (StripeException e) {
-            throw new PaymentProcessingException(
-                    "Failed to create Stripe session for booking " + booking.getId(), e);
-        }
+        return paymentMapper.toDto(paymentRepository.save(payment));
     }
 
     @Override
@@ -151,7 +110,69 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public void handleCancel(String sessionId) {
-        // Session remains valid for 24 hours; nothing to update, informational only.
+    }
+
+    private Booking getBookingOrThrow(Long bookingId) {
+        return bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Can't find booking by id " + bookingId));
+    }
+
+    private void checkPaymentAccess(User user, Booking booking) {
+        if (user.getRole() != Role.MANAGER && !booking.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You can only pay for your own bookings");
+        }
+    }
+
+    private BigDecimal calculateTotalAmount(Booking booking) {
+        long days = ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate());
+        return booking.getAccommodation().getDailyRate().multiply(BigDecimal.valueOf(days));
+    }
+
+    private Session createStripeSession(Booking booking, BigDecimal totalAmount,
+                                        String successBaseUrl, String cancelBaseUrl) {
+        long unitAmountCents = totalAmount.multiply(BigDecimal.valueOf(CENTS_PER_UNIT))
+                .longValueExact();
+
+        SessionCreateParams params = SessionCreateParams.builder()
+                .setMode(SessionCreateParams.Mode.PAYMENT)
+                .setSuccessUrl(buildRedirectUrl(successBaseUrl))
+                .setCancelUrl(buildRedirectUrl(cancelBaseUrl))
+                .addLineItem(SessionCreateParams.LineItem.builder()
+                        .setQuantity(1L)
+                        .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
+                                .setCurrency(CURRENCY)
+                                .setUnitAmount(unitAmountCents)
+                                .setProductData(SessionCreateParams.LineItem.PriceData
+                                        .ProductData.builder()
+                                        .setName("Booking #" + booking.getId())
+                                        .build())
+                                .build())
+                        .build())
+                .build();
+        try {
+            return Session.create(params);
+        } catch (StripeException e) {
+            throw new PaymentProcessingException(
+                    "Failed to create Stripe session for booking " + booking.getId(), e);
+        }
+    }
+
+    private String buildRedirectUrl(String baseUrl) {
+        return UriComponentsBuilder.fromUriString(baseUrl)
+                .queryParam(SESSION_ID_PARAM, SESSION_ID_PLACEHOLDER)
+                .build(false)
+                .toUriString();
+    }
+
+    private Payment buildPayment(Booking booking, Session session, BigDecimal totalAmount) {
+        Payment payment = new Payment();
+        payment.setBooking(booking);
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setSessionId(session.getId());
+        payment.setSessionUrl(toUrl(session.getUrl()));
+        payment.setAmountToPay(totalAmount);
+        return payment;
     }
 
     private URL toUrl(String value) {

@@ -9,22 +9,16 @@ import com.example.accommodation.repository.AccommodationRepository;
 import com.example.accommodation.service.AccommodationService;
 import com.example.accommodation.service.NotificationService;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class AccommodationServiceImpl implements AccommodationService {
     private final AccommodationRepository accommodationRepository;
     private final AccommodationMapper accommodationMapper;
     private final NotificationService notificationService;
-
-    public AccommodationServiceImpl(AccommodationRepository accommodationRepository,
-            AccommodationMapper accommodationMapper,
-            NotificationService notificationService) {
-        this.accommodationRepository = accommodationRepository;
-        this.accommodationMapper = accommodationMapper;
-        this.notificationService = notificationService;
-    }
 
     @Override
     public AccommodationDto create(AccommodationRequestDto requestDto) {
@@ -53,7 +47,7 @@ public class AccommodationServiceImpl implements AccommodationService {
     @Transactional
     public AccommodationDto update(Long id, AccommodationRequestDto requestDto) {
         Accommodation accommodation = getAccommodationOrThrow(id);
-        accommodationMapper.updateModel(accommodation, requestDto);
+        accommodationMapper.updateModel(requestDto, accommodation);
         return accommodationMapper.toDto(accommodationRepository.save(accommodation));
     }
 

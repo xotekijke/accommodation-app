@@ -1,3 +1,4 @@
+// src/test/java/com/example/accommodation/service/BookingServiceImplTest.java
 package com.example.accommodation.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,10 +58,8 @@ class BookingServiceImplTest {
         accommodation.setId(ACCOMMODATION_ID);
         accommodation.setAvailability(0);
 
-        BookingRequestDto requestDto = new BookingRequestDto();
-        requestDto.setAccommodationId(ACCOMMODATION_ID);
-        requestDto.setCheckInDate(LocalDate.now());
-        requestDto.setCheckOutDate(LocalDate.now().plusDays(2));
+        BookingRequestDto requestDto = new BookingRequestDto(
+                LocalDate.now(), LocalDate.now().plusDays(2), ACCOMMODATION_ID);
 
         when(accommodationRepository.findWithLockById(ACCOMMODATION_ID))
                 .thenReturn(accommodation);
@@ -78,10 +77,8 @@ class BookingServiceImplTest {
         accommodation.setId(ACCOMMODATION_ID);
         accommodation.setAvailability(1);
 
-        BookingRequestDto requestDto = new BookingRequestDto();
-        requestDto.setAccommodationId(ACCOMMODATION_ID);
-        requestDto.setCheckInDate(LocalDate.now());
-        requestDto.setCheckOutDate(LocalDate.now().plusDays(2));
+        BookingRequestDto requestDto = new BookingRequestDto(
+                LocalDate.now(), LocalDate.now().plusDays(2), ACCOMMODATION_ID);
 
         when(accommodationRepository.findWithLockById(ACCOMMODATION_ID))
                 .thenReturn(accommodation);
@@ -101,10 +98,8 @@ class BookingServiceImplTest {
         accommodation.setId(ACCOMMODATION_ID);
         accommodation.setAvailability(2);
 
-        BookingRequestDto requestDto = new BookingRequestDto();
-        requestDto.setAccommodationId(ACCOMMODATION_ID);
-        requestDto.setCheckInDate(LocalDate.now());
-        requestDto.setCheckOutDate(LocalDate.now().plusDays(2));
+        BookingRequestDto requestDto = new BookingRequestDto(
+                LocalDate.now(), LocalDate.now().plusDays(2), ACCOMMODATION_ID);
 
         Booking savedBooking = new Booking();
         savedBooking.setId(5L);
@@ -112,8 +107,9 @@ class BookingServiceImplTest {
         savedBooking.setUser(user);
         savedBooking.setStatus(BookingStatus.PENDING);
 
-        BookingDto expectedDto = new BookingDto();
-        expectedDto.setId(5L);
+        BookingDto expectedDto = new BookingDto(
+                5L, requestDto.checkInDate(), requestDto.checkOutDate(),
+                ACCOMMODATION_ID, 2L, BookingStatus.PENDING);
 
         when(accommodationRepository.findWithLockById(ACCOMMODATION_ID))
                 .thenReturn(accommodation);
@@ -125,7 +121,7 @@ class BookingServiceImplTest {
 
         BookingDto actual = bookingService.create(user, requestDto);
 
-        assertThat(actual.getId()).isEqualTo(5L);
+        assertThat(actual.id()).isEqualTo(5L);
         assertThat(accommodation.getAvailability()).isEqualTo(1);
     }
 }
